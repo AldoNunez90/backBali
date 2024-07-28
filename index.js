@@ -7,8 +7,19 @@ const process = require('process');
 const {authenticate} = require('@google-cloud/local-auth');
 const cors = require('cors');
 const port = 3001; // Puedes cambiar el puerto si es necesario
-
+require('dotenv').config()
 app.use(cors());
+
+
+// const client_id = process.env.CLIENT_ID
+const project_id = process.env.PROJECT_ID
+const API_key = process.env.PROJECT_ID
+const auth_uri = process.env.PROJECT_ID
+const token_uri = process.env.PROJECT_ID
+const auth_provider_x509_cert_url = process.env.PROJECT_ID
+const client_secret = process.env.PROJECT_ID
+
+
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 
