@@ -1,9 +1,14 @@
+const express = require('express') ;
+const {google} = require('googleapis');
+const app = express();
 const fs = require('fs').promises;
 const path = require('path');
 const process = require('process');
 const {authenticate} = require('@google-cloud/local-auth');
-const {google} = require('googleapis');
+const cors = require('cors');
+const port = 3001; // Puedes cambiar el puerto si es necesario
 
+app.use(cors());
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 
@@ -63,97 +68,32 @@ async function authorize() {
   return client;
 }
 
-/**
- * Lists the next events on the user's primary calendar.
- * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
- */
-async function listEvents(auth) {
-  const calendar = google.calendar({version: 'v3', auth});
+
+async function getEvents(auth) {
+  // const authClient = await auth.getClient();
+  const calendar = google.calendar({ version: 'v3', auth});
   const res = await calendar.events.list({
     calendarId: 'primary',
     timeMin: new Date().toISOString(),
     singleEvents: true,
     orderBy: 'startTime',
   });
-  const events = res.data.items;
-  return events.data.items;
-  // const events = res.data.items;
-  // if (!events || events.length === 0) {
-  //   console.log('No upcoming events found.');
-  //   return;
-  // }
-  // console.log('Upcoming 10 events:');
-  // events.map((event, i) => {
-  //   const start = event.start.dateTime || event.start.date;
-  //   console.log(`${start} - ${event.summary}`);
-  // });
+
+  return res.data.items;
 }
 
+app.get('/api/getEvents', async (req, res) => {
+//   const { startDate, endDate } = req.query;
+  try {
+    const events = await authorize().then(getEvents);
+    res.json(events);
+    console.log(events);
+  } catch (error) {
+    console.error('Error fetching events:', error);
+    res.status(500).send('Error fetching events');
+  }
+});
 
-// Refer to the Node.js quickstart on how to setup the environment:
-// https://developers.google.com/calendar/quickstart/node
-// Change the scope to 'https://www.googleapis.com/auth/calendar' and delete any
-// stored credentials.
-
-const session = {
-    'summary': 'Nueva reunión',
-    'location': 'Av. Sta. Fe 911 Piso 1 A, C1059 Cdad. Autónoma de Buenos Aires',
-    'description': 'Sesión de fotos',
-    'start': {
-      'dateTime': '2024-08-05T09:00:00-03:00',
-      'timeZone': 'America/Argentina/Buenos_Aires',
-    },
-    'end': {
-      'dateTime': '2024-08-05T11:00:00-03:00',
-      'timeZone': 'America/Argentina/Buenos_Aires',
-    },
-    // 'attendees': [
-    //   {'email': 'lpage@example.com'},
-    //   {'email': 'sbrin@example.com'},
-    // ],
-    'colorId': '4',
-    'reminders': {
-      'useDefault': false,
-      'overrides': [
-        {'method': 'email', 'minutes': 24 * 60},
-        {'method': 'popup', 'minutes': 10},
-      ],
-    },
-  };
-
-  // Buscar eventos existentes
-  async function createEvent(auth){
-    const calendar = google.calendar({version: 'v3', auth});
-    const existingEvents = await calendar.events.list({
-    calendarId: 'primary',
-    timeMin: new Date().toISOString(),
-    singleEvents: true,
-     orderBy: 'startTime',
-  });
-
-  const duplicate = existingEvents.data.items.find(event => {
-    return event.start.dateTime === session.start.dateTime || event.end.dateTime === session.end.dateTime;
-  });
-
-  if (duplicate) {
-    console.log('Event already exists');
-    return;
-  } else {    
-    const calendar = google.calendar({version: 'v3', auth});
-    calendar.events.insert({
-        auth: auth,
-        calendarId: 'primary',
-        resource: session,
-    }, function(err, event) {
-        if (err) {
-            console.log('There was an error contacting the Calendar service: ' + err);
-            return;
-        }
-        console.log('Event created: %s', event.htmlLink);
-    });
-}
-}
-
-
-authorize().then(listEvents).catch(console.error);
-// authorize().then(createEvent).catch(console.error);
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
+});
